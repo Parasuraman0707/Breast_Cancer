@@ -5,7 +5,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score
 
 # === Streamlit Title ===
-st.title("🩺 Logistic Regression Model for reast Cancer Prediction")
+st.title("🩺 Logistic Regression Model for Breast Cancer Prediction")
 
 # === Step 1: Load and Train Model Automatically ===
 st.write("### 🧠 Training Model Automatically Using 'breast-cancer.csv'")
