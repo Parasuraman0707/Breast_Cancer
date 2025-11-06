@@ -58,7 +58,7 @@ if st.button("🔮 Predict"):
         prediction = LR.predict(input_df)[0]
 
         if prediction == 1:
-            st.error("⚠️ The model predicts **Breast Cancer PRESENT (1)**.")
+            st.error("⚠️ The model predicts **Breas Cancer PRESENT (1)**.")
         else:
             st.success("✅ The model predicts **No Breast Cancer (0)**.")
     except Exception as e:
