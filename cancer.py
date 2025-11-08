@@ -1,11 +1,11 @@
 import streamlit as st
 import pandas as pd
 from sklearn.model_selection import train_test_split
-from sklearn.linear_model import LogisticRegression
+from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import accuracy_score
 
 # === Streamlit Title ===
-st.title("🩺 Logistic Regression Model for Breast Cancer Prediction")
+st.title("🎗️ Breast Cancer Prediction App")
 
 # === Step 1: Load and Train Model Automatically ===
 st.write("### 🧠 Training Model Automatically Using 'breast-cancer.csv'")
@@ -24,19 +24,22 @@ try:
         data_df['target'] = pd.Categorical(data_df['target']).codes
 
     # Split data
-    x = data_df.drop('target', axis=1)
+    X = data_df.drop('target', axis=1)
     y = data_df['target']
 
-    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=30)
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=30)
 
-    # Train Logistic Regression Model
-    LR = LogisticRegression(solver='liblinear', random_state=42)
-    LR.fit(x_train, y_train)
+    # === Train Decision Tree Model ===
+    DT = DecisionTreeClassifier(
+        criterion='entropy',   # You can also use 'gini'
+        max_depth=6,           # To prevent overfitting
+        random_state=42
+    )
+    DT.fit(X_train, y_train)
 
     # Model accuracy
-    y_pred = LR.predict(x_test)
+    y_pred = DT.predict(X_test)
     accuracy = accuracy_score(y_test, y_pred)
-    st.success(f"✅ Model trained successfully! Accuracy: **{accuracy:.2f}**")
 
 except Exception as e:
     st.error(f"❌ Error loading or training model: {e}")
@@ -45,9 +48,8 @@ except Exception as e:
 # === Step 2: Input Features for Prediction ===
 st.header("🔍 Enter Patient Details for Prediction")
 
-# Generate input boxes dynamically from feature columns
 user_input = {}
-for col in x.columns:
+for col in X.columns:
     value = st.number_input(f"Enter value for **{col}**:", value=0.0, format="%.4f")
     user_input[col] = value
 
@@ -55,13 +57,48 @@ for col in x.columns:
 if st.button("🔮 Predict"):
     try:
         input_df = pd.DataFrame([user_input])
-        prediction = LR.predict(input_df)[0]
+        prediction = DT.predict(input_df)[0]
 
-        if prediction == 1:
-            st.error("⚠️ The model predicts **Breast Cancer PRESENT (1)**.")
+        # Get probability for class 1 (cancer)
+        cancer_index = list(DT.classes_).index(1) if 1 in DT.classes_ else 0
+        prob = DT.predict_proba(input_df)[0][cancer_index]
+
+        accuracy_percent = round(accuracy * 100, 2)
+
+        # Risk categorization
+        if prob < 0.33:
+            risk_level = "🟢 Low Risk"
+            color = "#ccffcc"
+            text_color = "#006600"
+            message = "No major signs of breast cancer detected."
+        elif prob < 0.67:
+            risk_level = "🟡 Medium Risk"
+            color = "#fff3cd"
+            text_color = "#996600"
+            message = "Some patterns may indicate possible concerns. Medical review suggested."
         else:
-            st.success("✅ The model predicts **No Breast Cancer (0)**.")
+            risk_level = "🔴 High Risk"
+            color = "#ffcccc"
+            text_color = "#b30000"
+            message = "High probability of breast cancer. Please consult a doctor immediately."
+
+        # === Stylish Result Box ===
+        st.markdown(f"""
+        <div style='background-color:{color};padding:25px;border-radius:15px;'>
+            <h2 style='color:{text_color};text-align:center;'>🩺 Diagnosis Report</h2>
+            <hr>
+            <h3 style='color:{text_color};'>Prediction Result:</h3>
+            <p style='font-size:18px;color:{text_color};'>
+                {'Breast Cancer Detected' if prediction == 1 else 'No Breast Cancer Detected'}
+            </p>
+            <h3 style='color:{text_color};'>Model Accuracy:</h3>
+            <p style='font-size:18px;color:{text_color};'>{accuracy_percent}%</p>
+            <h3 style='color:{text_color};'>Risk Level:</h3>
+            <p style='font-size:18px;color:{text_color};'>{risk_level}</p>
+            <hr>
+            <p style='font-size:16px;color:{text_color};'>{message}</p>
+        </div>
+        """, unsafe_allow_html=True)
+
     except Exception as e:
-        st.error(f"❌ Prediction failed: {e}")
-
-
+        st.error(f"⚠️ An error occurred: {e}")
